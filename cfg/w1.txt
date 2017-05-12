@@ -1,0 +1,4 @@
+
+map = "m1.txt"
+posx = "48"
+posy = "200"

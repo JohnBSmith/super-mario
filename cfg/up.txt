@@ -1,0 +1,4 @@
+
+map = "up.txt"
+posx = "40"
+posy = "100"
