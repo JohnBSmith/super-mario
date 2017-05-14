@@ -29,7 +29,7 @@ void Enemy::draw(){
 
 int Enemy::ctest(int x1, int y1){
   int x=x1/24, y=y1/24;
-  int n=map.n;
+  int n=map.w;
   int a = map.p[y*n+x].solid;
   return a;
 }

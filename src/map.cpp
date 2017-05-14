@@ -36,11 +36,14 @@ void reverse_blocks(string &s){
 }
 
 void mtest(int x, int y, int m, int n){
-  if(0<=x and x<=n and 0<=y and y<=m){
-    return;
-  }else{
-    cout << x << " | " << y << endl;
-    cout << "Unzulaessige Unterschreitung in fill_map" << endl;
+  if(x<0 || x>=n){
+    cout << "(x, y) == (" << x << ", " << y << ")" << endl;
+    cout << "Error in fill_map: x is out of bounds " << 0 << ".." << n-1 << "." << endl;
+    exit(1);
+  }
+  if(y<0 || y>=m){
+    cout << "(x, y) == (" << x << ", " << y << ")" << endl;
+    cout << "Error in fill_map: y is out of bounds " << 0 << ".." << m-1 << "." << endl;
     exit(1);
   }
 }
@@ -48,12 +51,12 @@ void mtest(int x, int y, int m, int n){
 void fill_map(Map &map, block_table &btab, int x, int y, const string &sp){
 
   Img *b1, *bg, *bf, *s1;
-  b1=btab.b1;
-  bg=btab.bg;
-  bf=btab.bf;
+  b1 = btab.b1;
+  bg = btab.bg;
+  bf = btab.bf;
 
-  int m = map.m;
-  int n = map.n;
+  int m = map.h;
+  int n = map.w;
   
   int x0=x;
   int y0=y-1;
@@ -71,10 +74,15 @@ void fill_map(Map &map, block_table &btab, int x, int y, const string &sp){
     }else if(s[i]=='.' and s[i+1]=='.'){
       i++;
       x++;
-    }else if(s[i]=='b' and s[i+1]=='1'){
+    }else if(s[i]=='b'){
       mtest(x,y,m,n);
-      map.p[n*y+x].block = b1;
-      map.p[n*y+x].solid = 2;
+      if(s[i+1]=='1'){
+        map.p[n*y+x].block = b1;
+        map.p[n*y+x].solid = 2;
+      }else if(s[i+1]=='p'){
+        map.p[n*y+x].block = btab.portal;
+        map.p[n*y+x].solid = 0;
+      }
       i++;
       x++;
     }else if(s[i]=='m' and s[i+1]=='1'){
@@ -157,6 +165,27 @@ void fill_map(Map &map, block_table &btab, int x, int y, const string &sp){
       Enemy* p = new Enemy(x*24, y*24);
       p->img = btab.enemy1;
       aenemy.append(p);
+      i++;
+      x++;
+    }else if(s[i]=='p'){
+      int index = s[i+1]-'0';
+      if(index<0 || index>9){
+        cout << "Error in map file: expected p0 upto p9." << endl;
+      }else{
+        pos[index].x = x*24;
+        pos[index].y = y*24;
+      }
+      i++;
+      x++;
+    }else if(s[i]=='P'){
+      mtest(x,y,m,n);
+      int index = s[i+1]-'0';
+      if(index<0 || index>9){
+        cout << "Error in map file: xpected P0 upto P9." << endl;
+      }else{
+        map.p[n*y+x].block = NULL;
+        map.p[n*y+x].solid = -40-(s[i+1]-'0');
+      }
       i++;
       x++;
     }

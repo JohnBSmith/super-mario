@@ -38,6 +38,7 @@ struct block_table{
   Img *b1, *bg, *bf, *st, *sm, *sb, *g1, *a1;
   Img *t1, *t2, *t3;
   Img *du, *enemy1, *enemy1f;
+  Img *portal;
 };
 
 void (*ppsets)(int,int) = gx::psets;
@@ -49,8 +50,12 @@ Img *marioj, *mariomj;
 int go_counter;
 
 Img *img_game_over;
-int posx0=48, posy0=200;
-int posx=0, posy=0;
+struct Position{
+  int x,y;
+};
+
+Position pos[20];
+int posx, posy;
 int go_left, go_right;
 int jump, go_down;
 int main_loop_end;
@@ -58,7 +63,9 @@ int mirror;
 int ktype;
 int jump_counter;
 int jump_m;
-int speed=16;
+
+#define SPEED 16
+int speed=SPEED;
 bool dark;
 bool input;
 bool input_pos;
@@ -70,7 +77,6 @@ int Schaden_Zeit;
 int Lebenspunkte;
 string input_s;
 string map_id;
-int map_w, map_h;
 int cash;
 int cmd_x, cmd_y;
 int cash_x, cash_y;
@@ -94,7 +100,7 @@ struct map_element{
 
 struct Map{
   map_element* p;
-  int m,n;
+  int w,h;
   int mbsize;
 };
 
@@ -128,38 +134,40 @@ int get_time(){
 }
 
 void init_pos(){
-  posx=posx0;
-  posy=posy0;
+  posx=pos[0].x;
+  posy=pos[0].y;
   go_left=0;
   go_right=0;
 }
 
-void init_map(){
-  int m=map_h, n=map_w;
+void init_map(Map &map){
+  int m,n;
+  m = map.h;
+  n = map.w;
   map.p = new map_element[m*n];
-  map.m = m;
-  map.n = n;
   int i,j;
   map_element* p = map.p;
   for(i=0; i<m; i++){
     for(j=0; j<n; j++){
-      p[i*n+j].block=0;
+      p[i*n+j].block=NULL;
       p[i*n+j].solid=0;
     }
   }
 }
 
-void dispose_map(){
-  delete map.p;
+void dispose_map(Map &map){
+  if(map.p) delete map.p;
+  map.p = NULL;
 }
 
-void load_world(const string &id){
+int load_world(const string &id){
   string s = string("cfg/")+id+".txt";
-  set_cfg(s.c_str());
-  dispose_map();
-  init_map();
+  if(set_cfg(map,s.c_str())) return 1;
+  dispose_map(map);
+  init_map(map);
   load_map("maps/"+map_id, map, btab);
   init_pos();
+  return 0;
 }
 
 void pset4(int x, int y){
@@ -326,6 +334,7 @@ void init_gx(){
   btab.t2 = load_ppm("img/ts2.ppm");
   btab.t3 = load_ppm("img/ts3.ppm");
   btab.du = load_ppm("img/spike.ppm");
+  btab.portal = load_ppm("img/portal.ppm");
   img_game_over = load_ppm("img/gameover.ppm");
   btab.enemy1 = load_ppm("img/enemy1.ppm");
   btab.enemy1f = copy_img(btab.enemy1);
@@ -459,6 +468,10 @@ void key_events(int type, int key){
     case SDLK_k:
       if(anti_alias>0) anti_alias--;
       break;
+    case SDLK_s:
+      speed = 2*speed;
+      if(speed>4*SPEED) speed=SPEED;
+      break;
     default:;
     }
   }
@@ -518,8 +531,8 @@ void eval(string &s){
   }else if(s=="fly"){
     fly_mode = not fly_mode;
   }else if(s=="speed"){
-    if(speed>10) speed=10;
-    else speed=20; 
+    if(speed>SPEED) speed=SPEED;
+    else speed=2*SPEED; 
   }else if(s=="gf"){
     cmd_ghost();
     fly_mode = not fly_mode;
@@ -537,8 +550,8 @@ void eval(string &s){
     draw_mario = draw_mushroom;
   }else if(s=="mario"){
     draw_mario = draw_mario_v2;
-  }else if(s.substr(0,4)=="load"){
-    int i=4;
+  }else if(s.substr(0,4)=="load" || s.substr(0,1)=="."){
+    int i = s[0]=='.'? 1: 4;
     while(i<s.size() and isspace(s[i])) i++;
     string id;
     while(i<s.size() and (isalpha(s[i]) or isdigit(s[i]) or s[i]=='.')){
@@ -624,7 +637,7 @@ void draw2(Img* img, int x, int y, char* p){
 void draw_map(Map &map){
   int px, py, x, y;
   px=posx/24; py=posy/24;
-  int m=map.m, n=map.n;
+  int m=map.h, n=map.w;
   map_element* p = map.p;
   Img* timg;
   for(int i=py-5; i<=py+5; i++){
@@ -698,28 +711,31 @@ void game_over(){
 void c_event(map_element &p){
   int n = -p.solid;
   if(n==1){
-    p.block=0;
+    p.block=NULL;
     p.solid=0;
     cash++;
     // cout << "\a";
   }else if(n==2){
-    p.block=0;
+    p.block=NULL;
     p.solid=0;
     cash+=10;
   }else if(n==3){
-    p.block=0;
+    p.block=NULL;
     p.solid=0;
     cash+=100;
   }else if(n==10){
     game_over_event=1;
   }else if(n==20){
     damage_event=1;
+  }else if(40<=n && n<50){
+    posx=pos[n-40].x;
+    posy=pos[n-40].y;
   }
 }
 
 int ctest(int px, int py){
   int x=px/24, y=py/24;
-  int n=map.n;
+  int n=map.w;
   int a = map.p[y*n+x].solid;
   if(a<0) c_event(map.p[y*n+x]);
   return a;
@@ -831,9 +847,9 @@ int rand_uniform(int a, int b){
 void rand_fill_map(){
   int x = rand_uniform(0,159);
   int y = rand_uniform(0,39);
-  int n = map.n;
+  int n = map.w;
   map_element* p = map.p+y*n+x;
-  if(p->solid==0 and p->block==0){
+  if(p->solid==0 and p->block==NULL){
     p->solid=-1;
     p->block=btab.t1;
   }
@@ -905,13 +921,14 @@ int main(){
   // gx::mode(1280,1024);
   // gx::fullscreen=1;
 
-  map_w=160; map_h=140;
-  init_map();
+  map.w = 400; map.h = 200;
   map.mbsize = 30;
+  map.p = NULL;
+  if(load_world("w1")){
+    cout << "Error: could not load world w1." << endl;
+    exit(1);
+  }
 
-  map_id = "m1.txt";
-  load_map("maps/"+map_id,map,btab);
-  init_pos();
   gx::init();
   Lebenspunkte=3;
 

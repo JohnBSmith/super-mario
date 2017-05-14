@@ -1,4 +1,8 @@
 
+void error(const char* id){
+  cout << "Error in config file '" << id << "':" << endl;
+}
+
 int load_cfg(std::map<string,void*> &m, const char* id){
   string s;
   ifstream is;
@@ -7,7 +11,7 @@ int load_cfg(std::map<string,void*> &m, const char* id){
     tk::read(is,s);
     is.close();
   }else{
-    cout << "Konnte Datei \"" << id << "\" nicht laden.";
+    cout << "Could not load file \"" << id << "\".\n";
     return 0;
   }
   int i;
@@ -32,7 +36,8 @@ int load_cfg(std::map<string,void*> &m, const char* id){
           else if(c=='s') value+=' ';
           else if(c=='b') value+='\\';
         }else if(s[i]=='\n'){
-          cout << "Fehler: Zeilenumbruch in Zeichenkette." << endl;
+          error(id);
+          cout << "line break inside of a string." << endl;
         }else{
           value+=s[i];
         }
@@ -48,7 +53,8 @@ int load_cfg(std::map<string,void*> &m, const char* id){
     }else if(s[i]=='#'){
       while(i<s.size() and s[i]!='\n') i++;
     }else{
-      cout << "Fehler: unbekanntes Zeichen " << s[i] << endl;
+      error(id);
+      cout << "unexpected character: " << s[i] << endl;
     }
   }
   return 1;
@@ -64,20 +70,21 @@ int find(std::map<string,void*> &m, string &s, const string &key){
   }
 }
 
-void set_cfg(const char* id){
+int set_cfg(Map &map, const char* id){
   string s;
   std::map<string,void*> m;
   int success = load_cfg(m,id);
   if(success){
     if(m.count("map")) find(m,map_id,"map");
-    if(m.count("posx")){
-      find(m,s,"posx");
-      posx0 = tk::stoi(s);
+    if(m.count("w")){
+      find(m,s,"w");
+      map.w = tk::stoi(s);
     }
-    if(m.count("posy")){
-      find(m,s,"posy");
-      posy0 = tk::stoi(s);
+    if(m.count("h")){
+      find(m,s,"h");
+      map.h = tk::stoi(s);
     }
   }
+  return 1-success;
 }
 
