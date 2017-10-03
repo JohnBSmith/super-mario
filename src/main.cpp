@@ -57,6 +57,7 @@ struct Position{
 Position pos[20];
 int posx, posy;
 int go_left, go_right;
+int go_left_n, go_right_n;
 int jump, go_down;
 int main_loop_end;
 int mirror;
@@ -283,6 +284,10 @@ void draw_mario_v1(){
   }
 }
 
+int inc_go(int n){
+  return n<4? n+1: n;
+}
+
 void draw_mario_v2(){
   Img *img_mario=0;
   if(mirror){
@@ -376,10 +381,25 @@ void init_gx(){
   mirror_img(mariomj);
 }
 
+#define GO_MAX 40
 
 void update_pos(){
-  if(go_left && cleft==0) posx-=1;
-  if(go_right && cright==0) posx+=1;
+  if(go_left){
+    if(go_left_n<GO_MAX) go_left_n++;
+  }else{
+    if(go_left_n>0) go_left_n--;
+  }
+  if(go_left && cleft==0){
+    posx-=1;
+  }
+  if(go_right){
+    if(go_right_n<GO_MAX) go_right_n++;
+  }else{
+    if(go_right_n>0) go_right_n--;
+  }
+  if(go_right && cright==0){
+    posx+=1;
+  }
   if(jump_counter>0 && cup==0){
     if(jump_counter<=40){
       jump_m+=2;
